@@ -69,21 +69,28 @@ def deduplicate(df: pd.DataFrame, threshold: float = DEDUP_THRESHOLD) -> pd.Data
     Keeps one representative per cluster of duplicates.
     """
     log.info(f"Deduplicating {len(df)} messages (threshold={threshold})…")
+    # First remove exact duplicate strings
+    df = df.drop_duplicates(subset=["customer_text_clean"]).reset_index(drop=True)
     texts = df["customer_text_clean"].tolist()
 
     vectorizer = TfidfVectorizer(max_features=5000, ngram_range=(1, 2))
     matrix = vectorizer.fit_transform(texts)
 
     keep_mask = np.ones(len(texts), dtype=bool)
-    for i in range(len(texts)):
-        if not keep_mask[i]:
-            continue
-        # Compare i against all later examples
-        if i < len(texts) - 1:
-            sims = cosine_similarity(matrix[i], matrix[i+1:]).flatten()
-            for j, sim in enumerate(sims, start=i+1):
-                if sim >= threshold and keep_mask[j]:
-                    keep_mask[j] = False
+    chunk_size = 500
+    n = len(texts)
+    for start in range(0, n, chunk_size):
+        end = min(start + chunk_size, n)
+        # Compute similarities of this chunk against remaining rows
+        chunk_sims = cosine_similarity(matrix[start:end], matrix[start:])
+        for i_local, i in enumerate(range(start, end)):
+            if not keep_mask[i]:
+                continue
+            # Duplicate indices in chunk_sims relative to start
+            sim_row = chunk_sims[i_local]
+            # Match any future j > i
+            dups = np.where(sim_row[i - start + 1:] >= threshold)[0] + (i + 1)
+            keep_mask[dups] = False
 
     result = df[keep_mask].reset_index(drop=True)
     log.info(f"After dedup: {len(result)} messages (removed {len(df) - len(result)} near-duplicates).")

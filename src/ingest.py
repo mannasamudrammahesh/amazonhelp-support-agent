@@ -98,20 +98,21 @@ def load_raw(frac: float = 1.0) -> pd.DataFrame:
         dtype={
             "tweet_id": str,
             "author_id": str,
-            "inbound": str,   # read as str, coerce below
+            "inbound": str,
             "text": str,
             "response_tweet_id": str,
             "in_response_to_tweet_id": str,
+            "created_at": str,
         },
         low_memory=False,
     )
-    # Parse dates safely after load (avoids slow per-element dateutil fallback)
+    # Parse dates with exact twitter timestamp format for vectorization
     if "created_at" in df.columns:
-        df["created_at"] = pd.to_datetime(df["created_at"], format="mixed", errors="coerce")
+        df["created_at"] = pd.to_datetime(df["created_at"], format="%a %b %d %H:%M:%S %z %Y", errors="coerce")
     # Normalize inbound to bool
     if "inbound" in df.columns:
         df["inbound"] = df["inbound"].astype(str).str.lower().isin(["true", "1", "yes"])
-    # Normalise column names (dataset uses these exact headers)
+    # Normalise column names
     df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
     log.info(f"Loaded {len(df):,} rows. Columns: {list(df.columns)}")
     return df
@@ -150,16 +151,17 @@ def reconstruct_threads(df: pd.DataFrame) -> list[dict]:
     # Find thread roots: inbound tweets that have no in_response_to in our set
     all_ids = set(df["tweet_id"])
     roots = df[
-        df["inbound"].astype(str).str.lower().isin(["true", "1"]) &
+        df["inbound"].astype(bool) &
         (~df["in_response_to_tweet_id"].isin(all_ids))
     ]["tweet_id"].tolist()
 
-    # Build reply_map: parent_id → list of child_ids
+    # Build reply_map: parent_id → list of child_ids (vectorized iteration)
     reply_map: dict[str, list[str]] = {}
-    for _, row in df.iterrows():
-        parent = str(row.get("in_response_to_tweet_id", ""))
-        if parent and parent != "nan":
-            reply_map.setdefault(parent, []).append(str(row["tweet_id"]))
+    valid_pairs = df[["tweet_id", "in_response_to_tweet_id"]].dropna()
+    for tid, parent in valid_pairs.itertuples(index=False):
+        parent_str = str(parent).strip()
+        if parent_str and parent_str != "nan":
+            reply_map.setdefault(parent_str, []).append(str(tid).strip())
 
     threads = []
     seen_roots = set()

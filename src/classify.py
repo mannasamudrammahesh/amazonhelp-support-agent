@@ -35,6 +35,12 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder
 
+import sys
+from pathlib import Path
+
+# Ensure src/ is in sys.path
+sys.path.insert(0, str(Path(__file__).parent))
+
 from taxonomy import INTENT_NAMES, get_taxonomy_prompt_block, get_few_shot_examples
 
 load_dotenv()
@@ -53,7 +59,7 @@ def _grok_client():
     from openai import OpenAI
     api_key = os.environ.get("XAI_API_KEY")
     if not api_key:
-        raise EnvironmentError("XAI_API_KEY not set. Copy .env.example → .env and fill in your key.")
+        raise EnvironmentError("XAI_API_KEY not set. Copy .env.example -> .env and fill in your key.")
     return OpenAI(api_key=api_key, base_url=_OPENAI_BASE_URL)
 
 
@@ -269,4 +275,4 @@ if __name__ == "__main__":
 
     gc = GrokClassifier()
     result = gc.predict(test_text)
-    print(f"Grok → {result}")
+    print(f"Grok -> {result}")

@@ -215,12 +215,16 @@ if __name__ == "__main__":
     thread_parquet = DATA_DIR / "amazonhelp_threads.parquet"
     if not thread_parquet.exists():
         print("Run src/ingest.py first to generate the thread parquet.")
+    elif _EMBEDDINGS_FILE.exists() and _RECORDS_FILE.exists():
+        print("Loading pre-built retrieval index...")
+        idx = load_index()
     else:
         idx = build_and_save_index(thread_parquet)
-        # Quick sanity check
-        q = "My package never arrived and tracking shows it was delivered"
-        hits = idx.retrieve(q, k=3)
-        print(f"\nQuery: {q}")
-        for h in hits:
-            print(f"  [{h['similarity_score']:.3f}] {h['customer_text'][:60]}...")
-            print(f"           → {h['agent_reply'][:80]}...")
+
+    # Quick sanity check
+    q = "My package never arrived and tracking shows it was delivered"
+    hits = idx.retrieve(q, k=3)
+    print(f"\nQuery: {q}")
+    for h in hits:
+        print(f"  [{h['similarity_score']:.3f}] {h['customer_text'][:60]}...")
+        print(f"           -> {h['agent_reply'][:80]}...")

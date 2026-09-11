@@ -2,10 +2,13 @@
 .env
 *.env
 
-# Large data files – regenerate with `python src/ingest.py`
+# Large data files - regenerate with `python src/ingest.py`
 data/*.zip
 data/*.csv
 data/*.parquet
+data/retrieval_index/
+data/twcs/
+kaggle*.json
 
 # Python
 __pycache__/
@@ -30,6 +33,3 @@ models/
 
 # Eval outputs (large)
 eval/results/
-
-data/twcs/
-kaggle*.json
