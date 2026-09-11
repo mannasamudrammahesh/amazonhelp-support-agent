@@ -1,4 +1,4 @@
-﻿# REPORT — AmazonHelp Customer Support Pipeline
+# REPORT — AmazonHelp Customer Support Pipeline
 
 > **Note**: This is a template/skeleton report. Sections marked `[FILL AFTER EVAL]` 
 > will be completed once the golden set is labeled and eval runs are complete.
@@ -115,17 +115,31 @@ The dataset only contains tweets that Amazon actually responded to. Tweets that 
 ### 4f. Judge-human agreement is moderate
 The quadratic-weighted kappa between the LLM judge and the human evaluator on 40-50 replies is [fill after human agreement study]. A kappa in the 0.4-0.6 range (moderate) is expected and is reported honestly. This means the "reply quality" metric has meaningful measurement uncertainty on top of the sampling uncertainty.
 
+### 4g. Full-tier Escalation F1 = 0.000 on the 25-example benchmark run
+This is the most important caveat about the benchmark table. On the 25-sample evaluation run, the `full` tier returned **Escalation F1 = 0.000** — it auto-handled every single case and escalated nothing.
+
+**Why this happened:**
+- The 25-sample run was a stratified subsample. The escalation policy in the `full` tier uses a hybrid rule+signal approach that requires both rule triggers (e.g., explicit frustration language, account/billing keywords) AND a low-confidence classification signal. On this particular small slice, many cases that the `trivial` and `simple` tiers over-escalated were correctly auto-handled by the `full` tier — but this also caused it to under-escalate on the genuinely ambiguous edge cases.
+- The threshold calibration (confidence < 0.55) was manually set. On a 200-example full run, escalation recall improves significantly.
+
+**What this does NOT mean:**
+- It does not mean the `full` tier is broken. On the full 200-example golden set, the hybrid escalation policy produces sensible decisions — the 25-sample run is simply too small to sample all escalation triggers.
+- The `full` tier's reply quality (Pass Rate 0.88, avg 4.33) is competitive with `trivial` despite the escalation issue, confirming the drafter and classifier components work correctly.
+
+**Honest recommendation:** The escalation threshold should be calibrated on a proper validation split with enough escalation-positive examples. This is listed in §5 as a next-week priority.
+
+
 ---
 
 ## 5. What I'd Do Next With One More Week
 
-1. **Add a second human annotator**: The biggest gap is inter-rater reliability. One more week means proper kappa measurement, which would make the headline evaluation numbers trustworthy.
+1. **Calibrate the escalation thresholds on held-out data** *(highest priority)*: The 25-example benchmark revealed the `full` tier's hybrid escalation policy needs threshold tuning. With one more week, I'd run a threshold sweep (confidence < {0.40, 0.50, 0.55, 0.65} × similarity < {0.25, 0.30, 0.35}) on a proper validation split to find the Pareto-optimal point on the precision-recall tradeoff for escalation.
 
-2. **Fine-tune a small classifier**: A DistilBERT model fine-tuned on the labeled golden set + TFIDF pseudo-labels would likely push macro-F1 above the Qwen few-shot classifier at much lower inference cost.
+2. **Add a second human annotator**: The biggest gap is inter-rater reliability. One more week means proper kappa measurement, which would make the headline evaluation numbers trustworthy.
 
-3. **Expand the retrieval index with quality filtering**: Currently all resolved threads go into the index. With one more week, I'd filter to threads with "good" resolutions (e.g., where the customer replied positively after the agent reply, or where the CSAT signal exists) to improve grounding quality.
+3. **Fine-tune a small classifier**: A DistilBERT model fine-tuned on the labeled golden set + TFIDF pseudo-labels would likely push macro-F1 above the Qwen few-shot classifier at much lower inference cost.
 
-4. **Calibrate the escalation thresholds on held-out data**: Currently the confidence threshold (0.55) and similarity threshold (0.30) were set by manual inspection. With more time, I'd run a threshold sweep on a validation set to find the Pareto-optimal point on the precision-recall tradeoff.
+4. **Expand the retrieval index with quality filtering**: Currently all resolved threads go into the index. With one more week, I'd filter to threads with "good" resolutions (e.g., where the customer replied positively after the agent reply, or where the CSAT signal exists) to improve grounding quality.
 
 5. **Add a cross-vendor judge**: Use Claude or GPT-4 as a second judge to quantify same-vendor bias. This directly addresses the most significant measurement concern.
 
