@@ -46,21 +46,36 @@ from taxonomy import INTENT_NAMES, get_taxonomy_prompt_block, get_few_shot_examp
 load_dotenv()
 log = logging.getLogger(__name__)
 
-# ── xAI model config (confirmed from docs.x.ai/developers/models) ─────────────
-CLASSIFIER_MODEL = "grok-3-mini"     # cheapest / highest throughput tier
-_OPENAI_BASE_URL = "https://api.x.ai/v1"
+# ── Model configuration (supports Groq & xAI) ───────────────────────────────
+def _get_api_config():
+    if os.environ.get("GROQ_API_KEY"):
+        return {
+            "api_key": os.environ["GROQ_API_KEY"],
+            "base_url": "https://api.groq.com/openai/v1",
+            "model": "qwen/qwen3.8-27b",
+        }
+    api_key = os.environ.get("XAI_API_KEY")
+    return {
+        "api_key": api_key,
+        "base_url": "https://api.x.ai/v1",
+        "model": "grok-3-mini",
+    }
+
+_CFG = _get_api_config()
+CLASSIFIER_MODEL = _CFG["model"]
+_OPENAI_BASE_URL = _CFG["base_url"]
 
 # Max retries for API calls
 MAX_RETRIES = 3
-RETRY_DELAY = 2.0  # seconds
+RETRY_DELAY = 1.0  # seconds
 
 
 def _grok_client():
     from openai import OpenAI
-    api_key = os.environ.get("XAI_API_KEY")
-    if not api_key:
-        raise EnvironmentError("XAI_API_KEY not set. Copy .env.example -> .env and fill in your key.")
-    return OpenAI(api_key=api_key, base_url=_OPENAI_BASE_URL)
+    cfg = _get_api_config()
+    if not cfg["api_key"]:
+        raise EnvironmentError("No API key found. Set GROQ_API_KEY or XAI_API_KEY in .env.")
+    return OpenAI(api_key=cfg["api_key"], base_url=cfg["base_url"])
 
 
 # ── 1. Trivial baseline ────────────────────────────────────────────────────────

@@ -63,8 +63,23 @@ from taxonomy import INTENT_NAMES
 log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(message)s")
 
-JUDGE_MODEL = "grok-3-mini"   # deliberate: different tier from drafting model (grok-3)
-_OPENAI_BASE_URL = "https://api.x.ai/v1"
+def _get_api_config():
+    if os.environ.get("GROQ_API_KEY"):
+        return {
+            "api_key": os.environ["GROQ_API_KEY"],
+            "base_url": "https://api.groq.com/openai/v1",
+            "model": "qwen/qwen3.8-27b",
+        }
+    api_key = os.environ.get("XAI_API_KEY")
+    return {
+        "api_key": api_key,
+        "base_url": "https://api.x.ai/v1",
+        "model": "grok-3-mini",
+    }
+
+_CFG = _get_api_config()
+JUDGE_MODEL = _CFG["model"]
+_OPENAI_BASE_URL = _CFG["base_url"]
 
 
 # ── Golden set loading ────────────────────────────────────────────────────────
@@ -228,13 +243,13 @@ def run_judge_eval(predictions: list[dict], golden: pd.DataFrame, skip_judge: bo
     if skip_judge:
         return {"skipped": True}
 
-    api_key = os.environ.get("XAI_API_KEY")
-    if not api_key:
-        log.warning("XAI_API_KEY not set — skipping LLM judge.")
+    cfg = _get_api_config()
+    if not cfg["api_key"]:
+        log.warning("No API key set (GROQ_API_KEY / XAI_API_KEY) — skipping LLM judge.")
         return {"skipped": True, "reason": "no_api_key"}
 
     from openai import OpenAI
-    client = OpenAI(api_key=api_key, base_url=_OPENAI_BASE_URL)
+    client = OpenAI(api_key=cfg["api_key"], base_url=cfg["base_url"])
 
     judge_results = []
     for i, (pred, (_, row)) in enumerate(zip(predictions, golden.iterrows())):
