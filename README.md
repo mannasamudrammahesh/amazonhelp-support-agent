@@ -1,6 +1,21 @@
-﻿# AmazonHelp Customer Support Pipeline
+# AmazonHelp Customer Support Pipeline
 
 A take-home SDE Intern assignment submission: an end-to-end customer support automation pipeline for the AmazonHelp Twitter account.
+
+---
+
+## 🔑 For Graders — Instant Setup (No API Key Needed)
+
+A pre-provisioned Groq API key is included below so you can run everything immediately without creating your own account.
+
+```bash
+# Create your .env file in one command:
+echo "GROQ_API_KEY=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" > .env
+```
+
+> **Note**: This key is shared for evaluation purposes only. Rate limits are ~30 req/min on the free tier — the eval harness handles retries automatically.
+
+---
 
 ## What This Does
 
