@@ -30,3 +30,6 @@ models/
 
 # Eval outputs (large)
 eval/results/
+
+data/twcs/
+kaggle*.json
