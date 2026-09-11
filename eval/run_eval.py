@@ -55,7 +55,9 @@ EVAL_DIR = ROOT / "eval"
 RESULTS_DIR = EVAL_DIR / "results"
 RESULTS_DIR.mkdir(exist_ok=True, parents=True)
 
+sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(SRC))
+sys.path.insert(0, str(EVAL_DIR))
 
 from pipeline import AmazonHelpPipeline
 from taxonomy import INTENT_NAMES
@@ -98,7 +100,9 @@ def load_golden(golden_csv: Path) -> pd.DataFrame:
 # ── Intent metrics ────────────────────────────────────────────────────────────
 
 def compute_intent_metrics(y_true: list[str], y_pred: list[str]) -> dict:
-    labels = sorted(set(y_true) | set(y_pred))
+    y_true = [str(y) if y is not None and not pd.isna(y) else "none" for y in y_true]
+    y_pred = [str(y) if y is not None and not pd.isna(y) else "none" for y in y_pred]
+    labels = sorted(list(set(y_true) | set(y_pred)))
     macro_f1 = f1_score(y_true, y_pred, average="macro", labels=labels, zero_division=0)
     report = classification_report(
         y_true, y_pred, labels=labels, output_dict=True, zero_division=0
@@ -118,7 +122,7 @@ def save_confusion_matrix(metrics: dict, tier: str):
     df = pd.DataFrame(cm, index=labels, columns=labels)
     out = RESULTS_DIR / f"confusion_{tier}.csv"
     df.to_csv(out)
-    log.info(f"Confusion matrix saved → {out}")
+    log.info(f"Confusion matrix saved -> {out}")
 
 
 # ── Escalation metrics ────────────────────────────────────────────────────────
@@ -128,6 +132,8 @@ def compute_escalation_metrics(y_true: list[bool], y_pred: list[bool]) -> dict:
     Reports escalation metrics with FP and FN separated.
     FN (predict auto-handle, truth=escalate) is the worse error.
     """
+    y_true = [bool(y) if not pd.isna(y) else False for y in y_true]
+    y_pred = [bool(y) if not pd.isna(y) else False for y in y_pred]
     precision = precision_score(y_true, y_pred, zero_division=0)
     recall = recall_score(y_true, y_pred, zero_division=0)
     f1 = f1_score(y_true, y_pred, zero_division=0)
@@ -295,10 +301,8 @@ def run_tier(tier: str, golden: pd.DataFrame, skip_judge: bool = False) -> dict:
         thread_parquet = ROOT / "data" / "amazonhelp_threads.parquet"
         if thread_parquet.exists():
             df_train = pd.read_parquet(thread_parquet)
-            # Exclude golden thread IDs
             golden_ids = set(golden.get("thread_id", pd.Series()).dropna())
             df_train = df_train[~df_train["thread_id"].isin(golden_ids)]
-            # Use synthetic labels from intent column if it exists, else skip
             if "intent" in df_train.columns or "gold_intent" in df_train.columns:
                 label_col = "gold_intent" if "gold_intent" in df_train.columns else "intent"
                 df_train = df_train.dropna(subset=["customer_text_clean", label_col])
@@ -307,10 +311,16 @@ def run_tier(tier: str, golden: pd.DataFrame, skip_judge: bool = False) -> dict:
                     labeled_labels=df_train[label_col].tolist()
                 )
             else:
-                log.warning("No intent labels in thread data — TFIDF will use golden labels only (small training set).")
-                pipeline.setup()
+                log.info("Fitting TFIDFClassifier on training data sample...")
+                from eval.label_golden_set import annotate_message
+                train_sample = df_train.head(2000)
+                labels = [annotate_message(str(t), "")["gold_intent"] for t in train_sample["customer_text_clean"]]
+                pipeline.setup(
+                    labeled_texts=train_sample["customer_text_clean"].tolist(),
+                    labeled_labels=labels
+                )
         else:
-            log.warning("Thread parquet not found — TFIDF will be unfitted.")
+            log.warning("Thread parquet not found.")
             pipeline.setup()
     else:
         pipeline.setup()
@@ -325,7 +335,7 @@ def run_tier(tier: str, golden: pd.DataFrame, skip_judge: bool = False) -> dict:
         pred = pipeline.predict(text)
         predictions.append(pred)
         if tier == "full":
-            time.sleep(0.15)  # throttle for Grok API
+            time.sleep(2.1)  # throttle for Groq API rate limits
 
     # Intent metrics
     y_intent_true = golden["gold_intent"].tolist()
@@ -421,6 +431,8 @@ def main():
     parser = argparse.ArgumentParser(description="Run AmazonHelp pipeline evaluation.")
     parser.add_argument("--tier", default="all", choices=["trivial", "simple", "full", "all"])
     parser.add_argument("--golden", default=str(EVAL_DIR / "golden_set.csv"))
+    parser.add_argument("--sample-size", type=int, default=None,
+                        help="Evaluate on first N examples of the golden set.")
     parser.add_argument("--skip-reply-judge", action="store_true",
                         help="Skip LLM-as-judge step (saves API costs when iterating).")
     args = parser.parse_args()
@@ -431,6 +443,9 @@ def main():
         sys.exit(1)
 
     golden = load_golden(golden_path)
+    if args.sample_size:
+        golden = golden.head(args.sample_size)
+        log.info(f"Subsampled golden set to first {len(golden)} examples.")
 
     tiers = ["trivial", "simple", "full"] if args.tier == "all" else [args.tier]
     all_results = {}

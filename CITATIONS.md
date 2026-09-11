@@ -25,10 +25,9 @@ All external sources referenced during implementation.
   License: Apache 2.0  
   Used for: Retrieval index embeddings.
 
-- **xAI Grok models** (xAI, 2024-2025).  
-  API: https://api.x.ai/v1 (OpenAI-compatible endpoint)  
-  Docs: https://docs.x.ai/developers/models  
-  Used for: Intent classification (grok-3-mini), reply drafting (grok-3), LLM-as-judge (grok-3-mini).
+- **Groq Qwen Models** (Alibaba Cloud / Groq, 2024).  
+  API: https://api.groq.com/openai/v1 (OpenAI-compatible endpoint)  
+  Used for: Intent classification (qwen-2.5-32b), reply drafting (qwen-2.5-32b), LLM-as-judge (qwen-2.5-32b).
 
 ---
 
@@ -39,7 +38,7 @@ All external sources referenced during implementation.
   Used for: TF-IDF vectorizer, logistic regression, classification metrics (F1, confusion matrix).
 - **sentence-transformers** (Reimers & Gurevych, 2019). https://www.sbert.net  
 - **openai Python SDK** (OpenAI, 2023). https://github.com/openai/openai-python  
-  Used to call xAI Grok via OpenAI-compatible endpoint.
+  Used to call Groq via OpenAI-compatible endpoint.
 - **scipy** (Virtanen et al., 2020). https://scipy.org  
   Used for: Pearson correlation in human-agreement study.
 - **numpy** (Harris et al., 2020). https://numpy.org  

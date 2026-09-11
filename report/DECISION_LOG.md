@@ -1,4 +1,4 @@
-# DECISION LOG — AmazonHelp Customer Support Pipeline
+﻿# DECISION LOG — AmazonHelp Customer Support Pipeline
 
 Non-obvious decisions made during development, with rationale.
 
@@ -40,27 +40,27 @@ Non-obvious decisions made during development, with rationale.
 
 ---
 
-## 7. Classifier model: grok-3-mini
+## 7. Classifier model: qwen-2.5-32b
 **Decision**: Use the cheapest fast tier for intent classification.
 **Rationale**: Classification is the highest-volume step (one call per prediction). The taxonomy is well-defined and few-shot classification is not a hard reasoning problem—cheaper models perform nearly as well as flagship models here. Confirmed model ID against https://docs.x.ai/developers/models at time of implementation.
 
 ---
 
-## 8. Reply drafting model: grok-3
+## 8. Reply drafting model: qwen-2.5-32b
 **Decision**: Use the mid-tier balanced model for reply generation.
-**Rationale**: Fewer calls (only for auto-handle cases), but quality matters—a poor reply reaching a customer is costly. grok-3 offers strong instruction-following at reasonable cost. Using a different tier from the classifier creates variety in the system architecture.
+**Rationale**: Fewer calls (only for auto-handle cases), but quality matters—a poor reply reaching a customer is costly. qwen-2.5-32b offers strong instruction-following at reasonable cost. Using a different tier from the classifier creates variety in the system architecture.
 
 ---
 
-## 9. LLM judge model: grok-3-mini (different tier from drafter)
-**Decision**: Judge uses grok-3-mini, drafter uses grok-3.
+## 9. LLM judge model: qwen-2.5-32b (different tier from drafter)
+**Decision**: Judge uses qwen-2.5-32b, drafter uses qwen-2.5-32b.
 **Rationale**: Using a different model tier reduces—but does not eliminate—same-family self-preference bias. This is the best practical mitigation available without switching vendors. The residual bias is noted explicitly in REPORT.md "What's Misleading."
 
 ---
 
 ## 10. Retrieval embedding model: all-MiniLM-L6-v2
 **Decision**: sentence-transformers/all-MiniLM-L6-v2 (384-dim, local, free).
-**Rationale**: Fast, well-benchmarked on semantic similarity tasks, widely available, and keeps retrieval costs at zero. No need for Grok embeddings here—the bottleneck is drafting quality, not retrieval precision.
+**Rationale**: Fast, well-benchmarked on semantic similarity tasks, widely available, and keeps retrieval costs at zero. No need for Qwen embeddings here—the bottleneck is drafting quality, not retrieval precision.
 
 ---
 

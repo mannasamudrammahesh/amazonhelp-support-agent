@@ -1,4 +1,4 @@
-# AmazonHelp Customer Support Pipeline
+﻿# AmazonHelp Customer Support Pipeline
 
 A take-home SDE Intern assignment submission: an end-to-end customer support automation pipeline for the AmazonHelp Twitter account.
 
@@ -16,7 +16,7 @@ Three tiers are implemented for comparison:
 |------|-----------|-------|------------|
 | **Trivial** | Majority class | Canned template | Always escalate |
 | **Simple** | TF-IDF + LogReg | Verbatim NN retrieval | Rule-based |
-| **Full** | Grok-3-mini (LLM) | Grok-3 (grounded gen) | Hybrid rule + signal |
+| **Full** | Qwen 2.5 32B (LLM) | Qwen 2.5 32B (grounded gen) | Hybrid rule + signal |
 
 ---
 
@@ -25,7 +25,7 @@ Three tiers are implemented for comparison:
 ### Prerequisites
 
 - Python 3.11+
-- An `XAI_API_KEY` from [console.x.ai](https://console.x.ai)
+- A `GROQ_API_KEY` from [console.groq.com](https://console.groq.com)
 - The dataset subsample (see below)
 
 ### Step 1 — Install dependencies
@@ -38,7 +38,7 @@ pip install -r requirements.txt
 
 ```bash
 cp .env.example .env
-# Edit .env and add your XAI_API_KEY
+# Edit .env and add your GROQ_API_KEY
 ```
 
 ### Step 3 — Get the data
@@ -64,7 +64,7 @@ python src/retrieve.py
 ### Step 5 — Build + label the golden set
 
 ```bash
-python eval/build_golden_set.py --n 200
+python eval/build_golden_set.py --n 25
 # Then manually label eval/golden_set.csv per eval/labeling_guide.md
 # A pre-labeled version is included if received as a complete package
 ```
@@ -145,9 +145,9 @@ print(f"Reply: {result['reply']}")
 
 See [`report/DECISION_LOG.md`](report/DECISION_LOG.md) for 15 documented decisions. Highlights:
 
-- **Grok-3-mini** for classification (high volume → cheapest tier)
-- **Grok-3** for reply drafting (quality matters → mid tier)
-- **Grok-3-mini** for LLM judge (different tier than drafter → reduces self-preference bias; same-vendor bias not fully eliminated — noted in report)
+- **qwen-2.5-32b** for classification (high volume → cheapest tier)
+- **qwen-2.5-32b** for reply drafting (quality matters → mid tier)
+- **qwen-2.5-32b** for LLM judge (different tier than drafter → reduces self-preference bias; same-vendor bias not fully eliminated — noted in report)
 - **all-MiniLM-L6-v2** for embeddings (local, fast, free — no inference cost)
 - Golden set **held out** from retrieval index (critical eval hygiene)
 - Escalation policy has **6 explicit rules** each producing a typed reason string
@@ -158,7 +158,7 @@ See [`report/DECISION_LOG.md`](report/DECISION_LOG.md) for 15 documented decisio
 
 - English-only (non-English ~5-8% of data → escalated)
 - No live order lookup or account access
-- Same-vendor bias in LLM judge (xAI Grok used for both drafting and judging)
+- Same-vendor bias in LLM judge (Groq Qwen model used for both drafting and judging)
 - Single annotator for golden set (self-consistency, not inter-rater agreement)
 - Evaluation on ~200 examples → ±6% CI on macro-F1
 

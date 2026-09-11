@@ -1,4 +1,4 @@
-# REPORT — AmazonHelp Customer Support Pipeline
+﻿# REPORT — AmazonHelp Customer Support Pipeline
 
 > **Note**: This is a template/skeleton report. Sections marked `[FILL AFTER EVAL]` 
 > will be completed once the golden set is labeled and eval runs are complete.
@@ -26,7 +26,7 @@ AmazonHelp is Amazon's official Twitter customer support account. "Good" in this
 - **Multi-language support**: The pipeline processes English only. ~5-8% of AmazonHelp tweets are non-English; these are flagged and escalated.
 - **Order-lookup tool integration**: No live order database. Replies reference historical patterns, not actual order data.
 - **Live account access**: No Amazon API integration. The system cannot verify account status, order states, or refund eligibility.
-- **Fine-tuned models**: All LLM capability comes from zero/few-shot prompting of Grok models. No fine-tuning was performed.
+- **Fine-tuned models**: All LLM capability comes from zero/few-shot prompting of Qwen models. No fine-tuning was performed.
 - **Multi-turn conversation handling**: The pipeline processes the first customer message only; it does not model conversation state across turns.
 - **Real-time streaming**: Batch inference only; no streaming tweet ingestion.
 
@@ -51,7 +51,7 @@ The table below will be populated after running `python eval/run_eval.py --tier 
 
 **Trivial baseline**: majority-class intent predictor; always-escalate; canned template replies.  
 **Simple baseline**: TF-IDF + logistic regression; nearest-neighbor verbatim reply retrieval; rule-based escalation.  
-**Full system**: Grok-3-mini classifier; Grok-3 reply drafter with retrieved grounding; hybrid escalation policy.
+**Full system**: qwen-2.5-32b classifier; qwen-2.5-32b reply drafter with retrieved grounding; hybrid escalation policy.
 
 ---
 
@@ -94,7 +94,7 @@ Below are anticipated failure modes based on empirical patterns in the data; rep
 ## 4. What Is Misleading About My Headline Number?
 
 ### 4a. Same-vendor bias in LLM judge
-The judge (grok-3-mini) and the drafter (grok-3) are both xAI Grok models. Even though we chose different tiers to reduce self-preference bias, same-vendor bias is **not fully eliminated**. Both models were trained by the same organization and may share stylistic preferences that inflate the judge's scores for Grok-style outputs. A truly unbiased evaluation would use a judge from a different vendor (e.g., Claude, GPT-4). This mitigation is the best practical option given the fixed LLM provider constraint.
+The judge (qwen-2.5-32b) and the drafter (qwen-2.5-32b) are both Groq Qwen models. Even though we chose different tiers to reduce self-preference bias, same-vendor bias is **not fully eliminated**. Both models were trained by the same organization and may share stylistic preferences that inflate the judge's scores for Qwen-style outputs. A truly unbiased evaluation would use a judge from a different vendor (e.g., Claude, GPT-4). This mitigation is the best practical option given the fixed LLM provider constraint.
 
 ### 4b. Small golden set and confidence interval implications
 The golden set contains 150-250 examples. With 200 examples and an observed macro-F1 of, say, 0.75, the 95% confidence interval is approximately ±0.06 (using bootstrap). The headline numbers in the table look precise but carry substantial uncertainty. In particular, per-intent metrics for rare intents (e.g., `cancel_order` with ~12 examples) have confidence intervals that span nearly the entire [0, 1] range.
@@ -121,7 +121,7 @@ The quadratic-weighted kappa between the LLM judge and the human evaluator on 40
 
 1. **Add a second human annotator**: The biggest gap is inter-rater reliability. One more week means proper kappa measurement, which would make the headline evaluation numbers trustworthy.
 
-2. **Fine-tune a small classifier**: A DistilBERT model fine-tuned on the labeled golden set + TFIDF pseudo-labels would likely push macro-F1 above the Grok few-shot classifier at much lower inference cost.
+2. **Fine-tune a small classifier**: A DistilBERT model fine-tuned on the labeled golden set + TFIDF pseudo-labels would likely push macro-F1 above the Qwen few-shot classifier at much lower inference cost.
 
 3. **Expand the retrieval index with quality filtering**: Currently all resolved threads go into the index. With one more week, I'd filter to threads with "good" resolutions (e.g., where the customer replied positively after the agent reply, or where the CSAT signal exists) to improve grounding quality.
 
@@ -137,7 +137,7 @@ The quadratic-weighted kappa between the LLM judge and the human evaluator on 40
 Customer Tweet
       │
       ▼
-[Intent Classifier]  ←── Grok-3-mini + taxonomy prompt + few-shot examples
+[Intent Classifier]  ←── qwen-2.5-32b + taxonomy prompt + few-shot examples
       │
       ├── intent, confidence
       │
@@ -152,7 +152,7 @@ Customer Tweet
       │
       ├── escalate=True  → human agent (with drafted reply as starting point)
       │
-      └── escalate=False → [Reply Drafter]  ←── Grok-3 + retrieved context
+      └── escalate=False → [Reply Drafter]  ←── qwen-2.5-32b + retrieved context
                                 │               + AmazonHelp brand voice prompt
                                 ▼
                            Draft reply → customer
