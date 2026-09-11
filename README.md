@@ -4,16 +4,25 @@ A take-home SDE Intern assignment submission: an end-to-end customer support aut
 
 ---
 
-## 🔑 For Graders — Instant Setup (No API Key Needed)
+## 🔑 For Graders — Instant Setup (No API Key or Kaggle Account Needed)
 
-A pre-provisioned Groq API key is included below so you can run everything immediately without creating your own account.
+A pre-provisioned Groq API key is included below, and the **processed data subsample (~14 MB) is committed directly to this repo** — so you don't need a Kaggle account or any data downloads.
 
 ```bash
-# Create your .env file in one command:
+# 1. Create your .env file:
 echo "GROQ_API_KEY=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" > .env
+
+# 2. Install dependencies:
+pip install -r requirements.txt
+
+# 3. Build the retrieval index (~2-3 min, one-time):
+python src/retrieve.py
+
+# 4. Run a quick pipeline test:
+python -c "import sys; sys.path.insert(0,'src'); from pipeline import AmazonHelpPipeline; p=AmazonHelpPipeline(tier='full').setup(); r=p.predict('My package shows delivered but I never received it!'); print(r)"
 ```
 
-> **Note**: This key is shared for evaluation purposes only. Rate limits are ~30 req/min on the free tier — the eval harness handles retries automatically.
+> **Note**: The Groq key is shared for evaluation purposes. Rate limits are ~30 req/min — the eval harness handles retries automatically.
 
 ---
 

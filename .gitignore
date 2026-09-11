@@ -5,9 +5,10 @@
 # Large data files - regenerate with `python src/ingest.py`
 data/*.zip
 data/*.csv
-data/*.parquet
 data/retrieval_index/
 data/twcs/
+# Note: processed parquet subsamples ARE committed (small, ~7MB each)
+# data/*.parquet  <-- intentionally NOT ignored
 kaggle*.json
 
 # Python
